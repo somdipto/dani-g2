@@ -1,4 +1,4 @@
-import type { ActionItem, ExecResult, Executor, QueueSnapshot, QueueSource } from './model';
+import type { ActionItem, DictateResult, ExecResult, Executor, QueueSnapshot, QueueSource } from './model';
 import { parseItems } from './validate';
 
 const TIMEOUT_MS = 10_000;
@@ -25,8 +25,9 @@ export class HttpSource implements QueueSource {
   async load(): Promise<QueueSnapshot> {
     const res = await request(`${this.base}/queue`, {}, this.token);
     if (!res.ok) throw new Error(`queue request failed: HTTP ${res.status}`);
-    const { items } = parseItems(await res.json());
-    return { label: 'LIVE', items };
+    const payload = await res.json();
+    const { items } = parseItems(payload);
+    return { label: 'LIVE', items, voice: (payload as { voice?: unknown }).voice === true };
   }
 }
 
@@ -39,6 +40,21 @@ export class HttpExecutor implements Executor {
       const body = (await res.json().catch(() => ({}))) as { ref?: string; error?: string };
       if (!res.ok) return { ok: false, reason: body.error ?? `server said HTTP ${res.status}` };
       return { ok: true, ref: body.ref ?? item.id };
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : 'network error' };
+    }
+  }
+
+  async dictate(item: ActionItem, wav: Uint8Array): Promise<DictateResult> {
+    try {
+      const res = await request(
+        `${this.base}/actions/${encodeURIComponent(item.id)}/dictate`,
+        { method: 'POST', body: wav as unknown as BodyInit, headers: { 'content-type': 'audio/wav' } },
+        this.token,
+      );
+      const body = (await res.json().catch(() => ({}))) as { draft?: string; error?: string };
+      if (!res.ok || !body.draft) return { ok: false, reason: body.error ?? `server said HTTP ${res.status}` };
+      return { ok: true, draft: body.draft };
     } catch (e) {
       return { ok: false, reason: e instanceof Error ? e.message : 'network error' };
     }
@@ -61,7 +77,7 @@ export class SampleSource implements QueueSource {
     const res = await fetch(this.url);
     if (!res.ok) throw new Error(`sample queue: HTTP ${res.status}`);
     const j = (await res.json()) as { label?: string };
-    return { label: j.label ?? 'SAMPLE DATA', items: parseItems(j).items };
+    return { label: j.label ?? 'SAMPLE DATA', items: parseItems(j).items, voice: true };
   }
 }
 
@@ -79,6 +95,11 @@ export class SimulatedExecutor implements Executor {
       return { ok: false, reason: 'Simulated failure: share service timed out.' };
     }
     return { ok: true, ref: `sim-${item.id}` };
+  }
+  /** Demo mode: ignores the recording and returns a fixed sentence, so the voice flow can be shown without a key. */
+  async dictate(): Promise<DictateResult> {
+    await new Promise((r) => setTimeout(r, this.delayMs));
+    return { ok: true, draft: 'Sounds good. Thursday at 3 works for me, see you then.' };
   }
   async resolve(): Promise<void> {}
 }

@@ -1,0 +1,167 @@
+[
+  {
+    "expect": "brief",
+    "caption": "Dani watches your Telegram chats and your inbox. Six actions wait for your OK.",
+    "hold": 4,
+    "actions": [],
+    "wait": 700,
+    "name": "brief"
+  },
+  {
+    "expect": "queue",
+    "caption": "Open the review queue. TG is Telegram, MAIL, CAL and DRIVE are Track 4 actions.",
+    "hold": 3,
+    "actions": [
+      "click"
+    ],
+    "wait": 700,
+    "name": "queue"
+  },
+  {
+    "expect": "detail",
+    "caption": "A message from your launch group, and the reply Dani drafted. Nothing sends until you approve.",
+    "hold": 5,
+    "actions": [
+      "click"
+    ],
+    "wait": 700,
+    "name": "detail"
+  },
+  {
+    "expect": "listening",
+    "caption": "Want to say it yourself? Reply by voice.",
+    "hold": 3,
+    "actions": [
+      "down",
+      "down",
+      "down",
+      "click"
+    ],
+    "wait": 700,
+    "name": "listening"
+  },
+  {
+    "expect": "detail",
+    "caption": "Your words become the draft. Check it, then approve.",
+    "hold": 5,
+    "actions": [
+      "click"
+    ],
+    "wait": 2000,
+    "name": "voiced"
+  },
+  {
+    "expect": "receipt",
+    "caption": "Approve with one click on the temple or ring. The reply goes out to Telegram.",
+    "hold": 4,
+    "actions": [
+      "click"
+    ],
+    "wait": 1800,
+    "name": "sent"
+  },
+  {
+    "expect": "queue",
+    "caption": "Back to the queue.",
+    "hold": 2,
+    "actions": [
+      "click"
+    ],
+    "wait": 700,
+    "name": "queue2"
+  },
+  {
+    "expect": "receipt",
+    "caption": "A channel digest: one glance, one click to mark it read.",
+    "hold": 4,
+    "actions": [
+      "click",
+      "click"
+    ],
+    "wait": 1800,
+    "name": "digest"
+  },
+  {
+    "expect": "detail",
+    "caption": "Track 4: an email reply Dani drafted from your inbox.",
+    "hold": 4,
+    "actions": [
+      "click",
+      "click"
+    ],
+    "wait": 700,
+    "name": "mail"
+  },
+  {
+    "expect": "receipt",
+    "caption": "Approve it. Every action leaves a receipt.",
+    "hold": 4,
+    "actions": [
+      "click"
+    ],
+    "wait": 1800,
+    "name": "mail-done"
+  },
+  {
+    "expect": "error",
+    "caption": "Share a file. This run fails on purpose in the simulator so you can see the failure path.",
+    "hold": 4,
+    "actions": [
+      "click",
+      "down",
+      "click",
+      "click"
+    ],
+    "wait": 1800,
+    "name": "error"
+  },
+  {
+    "expect": "receipt",
+    "caption": "Retry from the glasses.",
+    "hold": 4,
+    "actions": [
+      "click"
+    ],
+    "wait": 1800,
+    "name": "retried"
+  },
+  {
+    "expect": "receipt",
+    "caption": "Not sure? Reject. Dani drops it and logs it.",
+    "hold": 4,
+    "actions": [
+      "click",
+      "click",
+      "down",
+      "down",
+      "click"
+    ],
+    "wait": 700,
+    "name": "rejected"
+  },
+  {
+    "expect": "brief",
+    "caption": "Skip the last one. Queue clear.",
+    "hold": 4,
+    "actions": [
+      "click",
+      "click",
+      "down",
+      "click",
+      "click"
+    ],
+    "wait": 700,
+    "name": "clear"
+  },
+  {
+    "expect": "receipts",
+    "caption": "Receipts list what ran, what was skipped and what was rejected.",
+    "hold": 4,
+    "actions": [
+      "down",
+      "click"
+    ],
+    "wait": 700,
+    "name": "receipts"
+  }
+]

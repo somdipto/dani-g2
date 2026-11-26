@@ -2,6 +2,7 @@ import { waitForEvenAppBridge } from '@evenrealities/even_hub_sdk';
 import { HttpExecutor, HttpSource, SampleSource, SimulatedExecutor } from './adapters';
 import { Controller } from './controller';
 import { GlassesView, toInput } from './glasses';
+import { DemoMic, GlassesMic } from './mic';
 
 const logEl = document.getElementById('log');
 const log = (m: string) => {
@@ -26,6 +27,7 @@ async function boot() {
     { get: (k) => bridge.getLocalStorage(k), set: (k, v) => bridge.setLocalStorage(k, v) },
     (p) => view.show(p),
     log,
+    demo && !backend ? new DemoMic() : new GlassesMic(bridge),
   );
   bridge.onEvenHubEvent((event) => {
     const input = toInput(event);

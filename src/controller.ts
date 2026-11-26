@@ -1,5 +1,5 @@
-import type { Executor, QueueSource, Receipt } from './model';
-import { finishRun, initialState, offlineState, openItem, reduce, type Input, type State } from './store';
+import type { ActionItem, DictateResult, Executor, Mic, QueueSource, Receipt } from './model';
+import { finishDictation, finishRun, initialState, offlineState, openItem, reduce, type Input, type State } from './store';
 import { render, type Page } from './view';
 
 export interface Storage {
@@ -22,6 +22,7 @@ export class Controller {
     private storage: Storage,
     private onPage: (p: Page) => Promise<void> | void,
     private log: (m: string) => void = () => {},
+    private mic?: Mic,
   ) {
     this.state = offlineState('NOT CONNECTED', 'Starting…');
   }
@@ -43,7 +44,7 @@ export class Controller {
     } else {
       try {
         const snap = await this.source.load();
-        this.state = initialState(snap.label, snap.items, this.receipts);
+        this.state = initialState(snap.label, snap.items, this.receipts, !!snap.voice && !!this.mic && !!this.executor.dictate);
       } catch (e) {
         const why = e instanceof Error ? e.message : 'unknown error';
         this.log(`load failed: ${why}`);
@@ -70,11 +71,43 @@ export class Controller {
         await this.save();
         if (item && r.outcome !== 'done') await this.executor.resolve(item, r.outcome);
       }
+      if (s.screen === 'detail' && this.state.screen === 'listening') {
+        await this.startRecording();
+      } else if (s.screen === 'listening' && this.state.screen === 'detail') {
+        await this.mic?.stop().catch(() => undefined); // cancelled: discard the recording
+      }
       await this.push();
       if (this.state.screen === 'running') await this.run();
+      if (this.state.screen === 'transcribing') await this.transcribe(item);
     } finally {
       this.busy = false;
     }
+  }
+
+  private async startRecording(): Promise<void> {
+    try {
+      await this.mic!.start();
+    } catch (e) {
+      this.log(`microphone failed: ${e instanceof Error ? e.message : e}`);
+      this.state = { ...this.state, screen: 'detail', failure: 'Microphone not available.' };
+    }
+  }
+
+  private async transcribe(item: ActionItem | undefined): Promise<void> {
+    let result: DictateResult;
+    try {
+      const wav = await this.mic!.stop();
+      result =
+        !item || !this.executor.dictate
+          ? { ok: false, reason: 'Voice replies are not available.' }
+          : wav.length < 6_000 // under about 0.2 s of audio
+            ? { ok: false, reason: 'Heard nothing. Try again.' }
+            : await this.executor.dictate(item, wav);
+    } catch (e) {
+      result = { ok: false, reason: e instanceof Error ? e.message : 'recording failed' };
+    }
+    this.state = finishDictation(this.state, result);
+    await this.push();
   }
 
   private async run(): Promise<void> {

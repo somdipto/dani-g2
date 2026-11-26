@@ -1,4 +1,4 @@
-import { counts, DETAIL_ACTIONS, MENU, openItem, type State } from './store';
+import { counts, detailActions, MENU, openItem, VOICE_ACTION, type State } from './store';
 import type { ActionItem } from './model';
 
 /** Plain description of a G2 page (576x288, monochrome). Kept free of SDK imports so it is unit-testable. */
@@ -48,7 +48,7 @@ export function listName(text: string): string {
   return out;
 }
 
-const APP_TAG: Record<string, string> = { gmail: 'MAIL', calendar: 'CAL', drive: 'DRIVE' };
+const APP_TAG: Record<string, string> = { gmail: 'MAIL', calendar: 'CAL', drive: 'DRIVE', telegram: 'TG' };
 const tag = (app?: string) => (app ? (APP_TAG[app] ?? app.slice(0, 5).toUpperCase()) : 'TASK');
 
 function header(s: State, right = ''): TextBox {
@@ -62,6 +62,13 @@ function header(s: State, right = ''): TextBox {
     h: 36,
     content: right ? `${left}   ${right}` : `${left}   ${c.pending} waiting`,
   };
+}
+
+/** Title, who it is from, what it answers (when known), then the draft. Four short lines fit the box. */
+function detailText(item: ActionItem, note?: string): string {
+  const head = `${clip(item.title, 40)}\nFrom ${clip(item.from, 30)}`;
+  const body = item.context ? `They: ${clip(item.context, 70)}\nReply: ${clip(item.draft, 90)}` : clip(item.draft, 120);
+  return `${head}\n${body}${note ? `\n! ${clip(note, 60)}` : ''}`;
 }
 
 export function render(s: State): Page {
@@ -121,17 +128,32 @@ function renderRaw(s: State): Page {
             y: 40,
             w: W,
             h: 112,
-            content: `${clip(item.title, 40)}\nFrom ${clip(item.from, 30)}\n${clip(item.draft, 120)}`,
+            content: detailText(item, s.failure),
           },
         ],
-        list: { name: 'act', x: 0, y: 150, w: W, h: 134, items: [...DETAIL_ACTIONS] },
+        list: { name: 'act', x: 0, y: 150, w: W, h: 134, items: detailActions(s) },
         menu: [
           { id: MENU.approve, name: 'Approve' },
           { id: MENU.skip, name: 'Skip' },
           { id: MENU.reject, name: 'Reject' },
+          ...(s.voice ? [{ id: MENU.voice, name: VOICE_ACTION }] : []),
         ],
       };
     }
+    case 'listening':
+      return {
+        texts: [
+          header(s, 'listening'),
+          { name: 'body', x: 0, y: 60, w: W, h: 160, content: `Say your reply to:\n${clip(item?.title ?? '', 44)}\n\nClick when done. Double-click cancels.`, capture: true },
+        ],
+      };
+    case 'transcribing':
+      return {
+        texts: [
+          header(s, 'working'),
+          { name: 'body', x: 0, y: 60, w: W, h: 160, content: 'Turning your voice into text.\n\nPlease wait.', capture: true },
+        ],
+      };
     case 'running':
       return {
         texts: [

@@ -27,6 +27,7 @@ export function parseItems(payload: unknown): { items: ActionItem[]; dropped: nu
       title: o.title as string,
       draft: o.draft as string,
       from: typeof o.from === 'string' ? o.from : '',
+      ...(typeof o.context === 'string' && o.context ? { context: o.context } : {}),
       ...(typeof o.app === 'string' && o.app ? { app: o.app } : {}),
     });
   }

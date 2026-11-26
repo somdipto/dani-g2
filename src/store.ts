@@ -1,10 +1,12 @@
-import type { ActionItem, ExecResult, Outcome, Receipt } from './model';
+import type { ActionItem, DictateResult, ExecResult, Outcome, Receipt } from './model';
 
-export type Screen = 'offline' | 'brief' | 'queue' | 'detail' | 'running' | 'receipt' | 'error' | 'receipts';
+export type Screen = 'offline' | 'brief' | 'queue' | 'detail' | 'listening' | 'transcribing' | 'running' | 'receipt' | 'error' | 'receipts';
 
 export interface State {
   label: string;
   screen: Screen;
+  /** The backend can turn a recording into a new draft, so detail offers "Reply by voice". */
+  voice: boolean;
   pending: ActionItem[];
   receipts: Receipt[];
   /** Index into `pending` for the open item. */
@@ -19,17 +21,22 @@ export type Input =
   | { type: 'back' }
   | { type: 'menu'; id: number };
 
-export const MENU = { approve: 1, skip: 2, reject: 3 } as const;
+export const MENU = { approve: 1, skip: 2, reject: 3, voice: 4 } as const;
 export const DETAIL_ACTIONS = ['Approve', 'Skip', 'Reject'] as const;
+export const VOICE_ACTION = 'Reply by voice';
+
+/** Rows shown under a draft. */
+export const detailActions = (s: Pick<State, 'voice'>): string[] => (s.voice ? [...DETAIL_ACTIONS, VOICE_ACTION] : [...DETAIL_ACTIONS]);
 
 export function offlineState(label: string, reason: string, receipts: Receipt[] = []): State {
-  return { label, screen: 'offline', pending: [], receipts, current: 0, failure: reason };
+  return { label, screen: 'offline', voice: false, pending: [], receipts, current: 0, failure: reason };
 }
 
-export function initialState(label: string, items: ActionItem[], receipts: Receipt[] = []): State {
+export function initialState(label: string, items: ActionItem[], receipts: Receipt[] = [], voice = false): State {
   const done = new Set(receipts.map((r) => r.itemId));
   return {
     label,
+    voice,
     screen: 'brief',
     pending: items.filter((i) => !done.has(i.id)),
     receipts,
@@ -85,8 +92,15 @@ export function reduce(s: State, input: Input, now = new Date()): State {
       if (choice === 0) return { ...s, screen: 'running', failure: undefined };
       if (choice === 1) return settle(s, 'skipped', 'skipped', now);
       if (choice === 2) return settle(s, 'rejected', 'rejected', now);
+      if (choice === 3 && s.voice) return { ...s, screen: 'listening', failure: undefined };
       return s;
     }
+    case 'listening':
+      if (input.type === 'click') return { ...s, screen: 'transcribing' };
+      if (input.type === 'back') return { ...s, screen: 'detail' };
+      return s;
+    case 'transcribing':
+      return s; // input is ignored while the recording is being turned into text
     case 'error':
       if (input.type === 'back') return { ...s, screen: 'detail', failure: undefined };
       if (input.type === 'click') {
@@ -109,6 +123,14 @@ export function finishRun(s: State, result: ExecResult, now = new Date()): State
   if (s.screen !== 'running') return s;
   if (result.ok) return settle(s, 'done', result.ref, now);
   return { ...s, screen: 'error', failure: result.reason };
+}
+
+/** Apply a transcription result to a state that is in the `transcribing` screen. */
+export function finishDictation(s: State, result: DictateResult): State {
+  if (s.screen !== 'transcribing') return s;
+  if (!result.ok) return { ...s, screen: 'detail', failure: result.reason };
+  const pending = s.pending.map((p, i) => (i === s.current ? { ...p, draft: result.draft } : p));
+  return { ...s, pending, screen: 'detail', failure: undefined };
 }
 
 export function counts(s: State) {

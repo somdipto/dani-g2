@@ -1,7 +1,23 @@
 {
   "label": "SAMPLE DATA",
-  "note": "Synthetic items for demo mode (?demo=1) and tests. Not real mail, events or files.",
+  "note": "Synthetic items for demo mode (?demo=1) and tests. Not real messages, mail, events or files.",
   "items": [
+    {
+      "id": "s-t1",
+      "app": "telegram",
+      "title": "Reply: Launch group",
+      "from": "Ava Rao (sample)",
+      "context": "Can you send the deck by 5? Investors are waiting.",
+      "draft": "Yes, the deck is ready. I'll send it here before 5."
+    },
+    {
+      "id": "s-t2",
+      "app": "telegram",
+      "title": "Digest: Crypto News (4 new)",
+      "from": "Crypto News (sample)",
+      "context": "- ETH ETF inflows hit a weekly high\n- Protocol vote opens Friday\n- Wallet audit published\n- Gas fees at 6 month low",
+      "draft": "Mark as read. Nothing is sent."
+    },
     {
       "id": "s-1",
       "app": "gmail",
